@@ -1,14 +1,27 @@
 // backend/tsconfig.json
 {
   "compilerOptions": {
-    "target": "es2020",
     "module": "commonjs",
-    "rootDir": "./src",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
     "outDir": "./dist",
-    "esModuleInterop": true,
-    "strict": true,
+    "baseUrl": "./",
+    "incremental": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "useDefineForClassFields": false,
+    "rootDir": "./src",
+    "esModuleInterop": true,
+    "strict": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

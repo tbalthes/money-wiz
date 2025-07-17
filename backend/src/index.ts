@@ -1,8 +1,12 @@
+// This code is part of the backend server for the Money Wiz application.
+// It initializes the server, sets up Firebase Admin SDK, and defines API endpoints.
 // backend/src/index.ts
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import admin from "firebase-admin"; // For Firestore
+import { AuthService } from "./auth/auth.service";
+import { CreateUserDto } from "./auth/dto/create-user.dto";
 
 dotenv.config();
 
@@ -44,7 +48,11 @@ if (Object.keys(serviceAccount).length > 0) {
 }
 // --- END MODIFIED SECTION ---
 
-const db = admin.firestore();
+// Only initialize Firestore if Firebase is properly initialized
+let db: admin.firestore.Firestore | null = null;
+if (Object.keys(serviceAccount).length > 0) {
+  db = admin.firestore();
+}
 
 // Middleware
 app.use(cors());
@@ -58,6 +66,13 @@ app.get("/", (req, res) => {
 // Example: Fetching data from Firestore
 app.get("/api/transactions", async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({
+        error:
+          "Firebase not configured. Please set up FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 environment variable.",
+      });
+    }
+
     const transactionsRef = db.collection("transactions");
     const snapshot = await transactionsRef.get();
     const transactions = snapshot.docs.map((doc) => ({
@@ -90,6 +105,21 @@ app.post("/api/ai/chat", async (req, res) => {
   } catch (error) {
     console.error("Error calling AI:", error);
     res.status(500).send("Error processing AI request.");
+  }
+});
+
+// Authentication Routes
+const authService = new AuthService();
+
+app.post("/auth/register", async (req, res) => {
+  try {
+    const dto: CreateUserDto = req.body;
+    const user = await authService.register(dto);
+    res.json(user);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 
