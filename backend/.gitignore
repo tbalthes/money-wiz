@@ -1,7 +1,0 @@
-node_modules/
-dist/
-.next/
-.env
-.env.*
-pnpm-lock.yaml
-/src/generated/prisma

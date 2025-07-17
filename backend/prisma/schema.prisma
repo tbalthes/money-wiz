@@ -1,0 +1,162 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================================
+// USER & AUTHENTICATION MODELS
+// ===================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  password  String // A hash of the user's password
+
+  // Relationships
+  accounts  Account[]
+  categories Category[]
+  merchantRules MerchantRule[] // Rules can be created, but the logic to apply them is deferred
+  goals     Goal[]
+  debts     Debt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===================================
+// CORE FINANCIAL MODELS
+// ===================================
+
+model Account {
+  id            String  @id @default(cuid())
+  accountName   String  // e.g., "My Money", "Chase Checking"
+  accountNumber String  // e.g., "522733K0009"
+  bankName      String  // e.g., "My Local Credit Union"
+  
+  // --- FOR FUTURE PLAID INTEGRATION ---
+  // These fields are optional, so you can manually create accounts for testing
+  // without needing a Plaid connection.
+  plaidItemId   String? @unique 
+  plaidAccessToken String? // IMPORTANT: This must be encrypted at rest when implemented
+
+  // Relationships
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  transactions  Transaction[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Transaction {
+  id                String  @id @default(cuid())
+  bankTransactionId String  // The original ID from the bank/CSV
+  
+  date              DateTime
+  type              TransactionType
+  merchant          String    // The "clean" name, e.g., "GitHub"
+  description       String    // The processed description
+  amount            Decimal
+  balanceAfter      Decimal
+  
+  rawMemo           String?   // Store the original, unprocessed memo string
+
+  // Relationships
+  // If the parent account is deleted, all its transactions are also deleted.
+  account           Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String
+  
+  // If a category is deleted, we don't want to lose the transaction.
+  // We just set its categoryId to null.
+  category          Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId        String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([accountId, bankTransactionId]) // Prevents duplicate transactions for the same account
+}
+
+model Category {
+  id            String  @id @default(cuid())
+  name          String
+  color         String?
+  
+  // Relationships
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  transactions  Transaction[]
+
+  parent        Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId      String?
+  subCategories Category[] @relation("SubCategories")
+  merchantRules MerchantRule[]
+  
+  @@unique([userId, name])
+}
+
+// ===================================
+// AUTOMATION & FUTURE FEATURE MODELS
+// ===================================
+
+// You can create rules in the UI now, but the backend logic to
+// automatically apply them during an import can be built later.
+model MerchantRule {
+  id              String  @id @default(cuid())
+  matchText       String
+  setMerchantName String
+
+  setCategory     Category @relation(fields: [setCategoryId], references: [id], onDelete: Cascade)
+  setCategoryId   String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+}
+
+// These can be created and managed manually by the user from day one.
+model Debt {
+  id              String   @id @default(cuid())
+  name            String
+  type            DebtType
+  initialBalance  Decimal
+  currentBalance  Decimal
+  interestRate    Decimal
+  minimumPayment  Decimal?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+}
+
+model Goal {
+  id            String    @id @default(cuid())
+  name          String
+  targetAmount  Decimal
+  currentAmount Decimal   @default(0)
+  targetDate    DateTime?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+}
+
+// ===================================
+// ENUMS
+// ===================================
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum DebtType {
+  MORTGAGE
+  STUDENT_LOAN
+  CREDIT_CARD
+  AUTO_LOAN
+  PERSONAL_LOAN
+  OTHER
+}
