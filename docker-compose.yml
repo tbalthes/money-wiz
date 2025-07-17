@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  # This is the service for your PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: money_wiz_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: moneywiz_user
+      POSTGRES_PASSWORD: mysecretpassword 
+      POSTGRES_DB: moneywiz
+    ports:
+      # This maps port 5433 on your computer to port 5432 in the container.
+      # We use 5433 to avoid conflicts if your other project is still using 5432.
+      - "5433:5432"
+    volumes:
+      # This ensures your data persists even if you remove the container
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

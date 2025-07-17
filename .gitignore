@@ -1,14 +1,7 @@
-# Node.js and npm/pnpm related
 node_modules/
-# ... other node related ignores ...
-
-# Production build output
-/frontend/out/
-/frontend/build/
-/frontend/.next/
-/backend/dist/
-
-# Environment variables
+dist/
+.next/
 .env
-.env.local
-# ... other .env ignores ...
+.env.*
+pnpm-lock.yaml
+/src/generated/prisma
